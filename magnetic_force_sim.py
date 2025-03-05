@@ -22,8 +22,8 @@ def main():
         vis_options=vis_options,
         sim_options=gs.options.SimOptions(
             gravity=(0, 0, -9.81),
-            dt=1e-3,
-            substeps=3,
+            dt=1e-2,
+            substeps=1,
         ),
         show_viewer=True,
     )
