@@ -2,8 +2,6 @@ import torch
 import genesis as gs
 from genesis.engine.solvers.rigid.rigid_solver_decomp import RigidSolver
 from magnetic_entity import MagneticEntity
-from magnetic_force_torque import MagneticForceTorque
-import time
 def main():
         ########################## init ##########################
     gs.init(backend=gs.cpu)
@@ -66,34 +64,29 @@ def main():
     magnetic_cube = MagneticEntity(
         volume=cube_volume,
         remanence=1.32 ,
-        direction=torch.tensor([-1, 1, -5], dtype=torch.float64),
+        direction=torch.tensor([0, 0, -1], dtype=torch.float64),
         link_idx=cube._get_ls_idx(),
         rigid_solver=rigid_solver
     )
     magnetic_cube.set_magnets_weight(torch.tensor([0.48])*1e-3) # 0.48g
     rigid_solver.get_links_inertial_mass(cube._get_ls_idx())
-    # camera.start_recording()
+    gradient3 = torch.tensor([1e-3, 0, 0], dtype=torch.float64).reshape(1,3)
+    field = torch.tensor([1e-6, 0, 0], dtype=torch.float64).reshape(1,3)
     for i in range(3000):
-        gradient3 = torch.tensor([1e-8, 0, 0], dtype=torch.float64).reshape(1,3)
-        field = torch.tensor([1e-3, 0, 0], dtype=torch.float64).reshape(1,3)
-        current_dipole_moment = magnetic_cube.get_current_dipole_moment()
-        torque = torch.cross(current_dipole_moment, field)
-        rigid_solver.apply_links_external_torque(torque, magnetic_cube.link_idx)
         position = magnetic_cube.get_magnets_position()
-        if i == 620:
-            print('Bump! at', i)
-            input('Press Enter to continue...')
-            time.sleep(5)
+        currents = magnetic_cube.get_currents_from_field_gradient3(field, gradient3)
         print('Position of the magnet:', position)
+        magnetic_dipole = magnetic_cube.get_current_dipole_moment()
+        magnetic_cube.apply_force_torque_on_magnet(currents)
+        force, torque = magnetic_cube.get_force_torque_from_currents(currents)
         scene.clear_debug_objects()
-        scene.draw_debug_arrow(pos=magnetic_cube.get_magnets_position(),vec=gradient3*1e8, color=(0,1,0,0.5))
-        
+        scene.draw_debug_arrow(pos=position,vec=gradient3/(4*torch.linalg.norm(gradient3)), color=(0,1,0,0.5))
+        scene.draw_debug_arrow(pos=position,vec=magnetic_dipole/(4*torch.linalg.norm(magnetic_dipole)), color=(1,0,0,0.5))
+        scene.draw_debug_arrow(pos=position,vec=force/(4*torch.linalg.norm(force)), color=(0,0,1,0.5))
+
         camera.render()
 
         scene.step()
-
-    # camera.stop_recording(save_to_filename="Videos/cube_bump.mp4", fps=60)
-
 
 if __name__ == "__main__":
     main()
