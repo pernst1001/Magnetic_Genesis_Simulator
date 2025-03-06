@@ -35,8 +35,8 @@ class MagneticEntity:
     def get_current_dipole_moment(self):
         current_quad = self.get_current_quad()
         current_rotation = R.from_quat(current_quad) * R.from_quat(self.initial_quad).inv()
-        current_dipole_moment = current_rotation.apply(self.initial_magnetic_dipole)
-        return torch.tensor(current_dipole_moment)
+        current_dipole_moment = torch.tensor(current_rotation.apply(self.initial_magnetic_dipole))
+        return current_dipole_moment
     
     def set_magnets_weight(self, weight):
         if type(weight) != torch.Tensor:
