@@ -7,7 +7,7 @@ class MPEMHandler:
     '''
     Class to handle the currents and field calculations using the MPEM model.
     '''
-    def __init__(self, calibration_path='Navion_2_Calibration_24-02-2020.yaml'):
+    def __init__(self, calibration_path='Navion_2_Calibration_24-02-2020.yaml', number_of_currents=8):
         '''
         Initialize the MPEM model
         Args:
@@ -23,6 +23,7 @@ class MPEMHandler:
         # Loading Backward Model
         self.backward_model = magmanip.BackwardModelMPEML2()
         self.backward_model.setCalibrationFile(self.calibration_path)
+        self.number_of_currents = number_of_currents
 
 
     def get_currents_from_field_grad5(self, position, field, gradient):
@@ -37,7 +38,7 @@ class MPEMHandler:
         '''
         position, field, gradient = self.check_convert_inputs_3(position), self.check_convert_inputs_3(field), self.check_convert_inputs_5(gradient) # Convert from torch to numpy
         currents = self.backward_model.computeCurrentsFromFieldGradient5(position, field, gradient)
-        return torch.tensor(currents.reshape(1,3), dtype=torch.float64)
+        return torch.tensor(currents.reshape(1,self.number_of_currents), dtype=torch.float64)
     
     def get_currents_from_field_grad3(self, position, field, dipole, gradient):
         ''''
@@ -52,7 +53,7 @@ class MPEMHandler:
         '''
         position, field, dipole, gradient = self.check_convert_inputs_3(position), self.check_convert_inputs_3(field), self.check_convert_inputs_3(dipole), self.check_convert_inputs_3(gradient) # Convert from torch to numpy
         currents = self.backward_model.computeCurrentsFromFieldDipoleGradient3(position, field, dipole, gradient)
-        return torch.tensor(currents.reshape(1,3), dtype=torch.float64)
+        return torch.tensor(currents.reshape(1,self.number_of_currents), dtype=torch.float64)
 
     def get_field_gradient5(self, position, currents):
         '''
@@ -64,7 +65,7 @@ class MPEMHandler:
             field (torch.tensor): field prediction
             gradient (torch.tensor): gradient5 prediction
         '''
-        position, currents = self.check_convert_inputs_3(position), self.check_convert_inputs_3(currents) # Convert from torch to numpy
+        position, currents = self.check_convert_inputs_3(position), self.check_convert_currents(currents) # Convert from torch to numpy
         field_gradient = self.forward_model.computeFieldGradient5FromCurrents(position, currents) 
         field, gradient = torch.tensor(field_gradient[0:3]), torch.tensor(field_gradient[3:])
         return field.reshape(1,3), gradient.reshape(5,1)
@@ -97,3 +98,15 @@ class MPEMHandler:
         input = input.cpu().numpy().astype(np.float64).reshape(5, 1)
         return input
 
+    def check_convert_currents(self, input):
+        '''
+        Check if the inputs are valid & convert to numpy
+        Args:
+            input (torch.tensor): input to be checked
+        Output:
+            input (np.array): input converted to numpy
+        '''
+        if not isinstance(input, torch.Tensor):
+            raise ValueError('Input should be a pytorch tensor')
+        input = input.cpu().numpy().astype(np.float64).reshape(self.number_of_currents, 1)
+        return input

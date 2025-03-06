@@ -13,7 +13,7 @@ class MagneticEntity:
         self.initial_magnetic_dipole = direction*self.mangetic_dipole_magnitude
         self.link_idx = torch.tensor([link_idx], dtype=torch.int32)
         self.rigid_solver = rigid_solver
-        self.mpem_handler = MPEMHandler()
+        self.mpem_handler = MPEMHandler(calibration_path='MINIMAG_E090094.yaml',number_of_currents=8)
         self.magnetic_force_torque = MagneticForceTorque()
         self.initial_quad = self.rigid_solver.get_links_quat(self.link_idx)
 
